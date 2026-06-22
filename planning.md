@@ -2,8 +2,6 @@
 
 **TakeMeter** — a fine-tuned `distilbert-base-uncased` text classifier that scores **discourse quality** in a football (soccer) community by sorting comments into three mutually exclusive labels: `analysis`, `hot_take`, and `reaction`.
 
-This document serves as the working specification and the record of the technical development: label design, edge-case rules, the data plan, the metrics, and the hyperparameter debugging that moved the model from a total majority-class collapse to a functioning multi-class classifier. README.md is the polished reader-facing report; this file holds the design reasoning and working notes behind each decision.
-
 ---
 
 ## 1. Community
@@ -129,6 +127,40 @@ Every test post is predicted `reaction`. The model scores 15/30 = 50.0% accuracy
 
 The diagonal now carries 5 + 0 + 12 = 17 correct predictions (17/30 = 56.7%). `analysis` is recovered (5 of 8 caught, F1 ≈ 0.59), but the `hot_take` row still holds 0 on its diagonal: the collapse described in [Section 3](#3-hard-edge-cases--explicit-decision-rules) persists for that single boundary, with its 7 true cases split toward `analysis` (3) and `reaction` (4).
 
+### Misclassified Test Examples (Fine-Tuned Model, Tuned Run)
+
+The three examples below are from the tuned run’s 13 test-set errors. Each one shows a different kind of mistake from the confusion matrix above.
+
+**Example 1 — `hot_take` misread as `analysis` (confidence: 0.43)**
+
+> "This is hilarious. Japan have zero chance this century. If any team outside of Europe/SA are going to win it'll be an African country first before anywhere else. Weebs are seriously getting out of control"
+
+*True label: `hot_take` → Predicted: `analysis`*
+
+- **What went wrong:** long + comparative + multi-sentence → the model thinks `analysis`.
+- **Why it should be `hot_take`:** it’s strong predictions stated like facts, but there’s no real evidence and no concrete why/how reasoning (per [Section 3](#3-hard-edge-cases--explicit-decision-rules)).
+- **What this says about the boundary:** the model doesn’t really get “asserts vs. argues” yet, so confident comparisons get treated as analysis.
+
+**Example 2 — `hot_take` misread as `reaction` (confidence: 0.58)**
+
+> "Cabo verde are the real dark horses of this tournament"
+
+*True label: `hot_take` → Predicted: `reaction`*
+
+- **What went wrong:** it’s short and hype-y, so the model buckets it as `reaction`.
+- **Why it should be `hot_take`:** “real dark horses” is a bold tournament claim with zero support (asserts, doesn’t argue).
+- **Pattern:** short `hot_take` posts get absorbed into `reaction` because they look like cheering.
+
+**Example 3 — `analysis` misread as `hot_take` (confidence: 0.41)**
+
+> "Iran played haramball until Belgium got the red card and Iran came dangerously close to winning. This is a weird World Cup"
+
+*True label: `analysis` → Predicted: `hot_take`*
+
+- **What went wrong:** slang/tone (“haramball”, “weird”) makes the model hear “provocative opinion” → `hot_take`.
+- **Why it should be `analysis`:** it points to a turning point (red card) and links it to a shift in the match (cause → effect).
+- **Pattern:** real `analysis` written in messy fan language gets misread.
+
 **Exported result artifacts.** The notebook writes one JSON summary per run; both files are committed to the repository.
 
 `evaluation_results.json` (initial collapsed run):
@@ -191,6 +223,21 @@ This project produces almost no implementation code, so AI tools were directed a
 - **Automated annotation assistance (LLM pre-labeling + manual review).** An LLM pre-labeled the raw comments against the taxonomy, emitting one label plus a one-line justification per row. **Every pre-assigned label was then reviewed and corrected by hand**, so pre-labeling sped up throughput, but the borderline rows in [Section 3](#3-hard-edge-cases--explicit-decision-rules) were re-adjudicated manually to avoid feeding noisy labels into training. The full mapping is tracked in `label_dataset.py` so the dataset is auditable and reproducible. *This pre-labeling is disclosed here and will be disclosed in the README's AI-usage section.*
 
 - **Error / failure-pattern analysis.** After each training run, the misclassified test examples are passed to an LLM that is asked to surface patterns such as short or low-information posts, sarcasm, and directional confusions (e.g. `hot_take → reaction`). *Outcome:* this is how the `hot_take` "messy middle" failure mode was characterized. Every proposed pattern is then **verified by re-reading the actual rows** before it enters the evaluation report; the LLM proposes, the human confirms.
+
+---
+
+## 7. Spec Reflection
+
+**One way the spec helped me**
+
+- It forced me to name the hardest edge case *before* I labeled everything. That’s why the Borderline Stat Post rule exists in [Section 3](#3-hard-edge-cases--explicit-decision-rules), instead of being something I made up after the model failed.
+- It also pushed me away from “accuracy-only.” That’s why [Section 5](#5-evaluation-metrics--definition-of-success) focuses on per-class F1, which is what exposed the majority-class collapse.
+
+**One way my execution diverged from my intent**
+
+- **Intent:** fine-tune on 200 balanced, hand-reviewed examples and at least match the 70% Groq zero-shot baseline.
+- **Reality:** tuned run got **56.7% accuracy** and **`hot_take` F1 = 0.00**.
+- **Why (my best read):** I fixed the training bug first ([Hyperparameter Evolution Log](#-hyperparameter-evolution-log)), but I didn’t do a second data pass to add more “clear-but-borderline” `hot_take` examples once I saw the collapse. So the model leaned on shallow cues (long = `analysis`, short hype = `reaction`) instead of the “asserts vs. argues” rule.
 
 ---
 
