@@ -1,0 +1,112 @@
+{
+  "model": "distilbert-base-uncased (tuned run)",
+  "test_set_size": 30,
+  "wrong_count": 13,
+  "errors": [
+    {
+      "id": 1,
+      "text": "The amount of people who didnt read the article, lol. Its measuring it as 33 games to get to 100 goals. How does \"more teams, more games\" have any relevance?",
+      "true": "analysis",
+      "predicted": "reaction",
+      "confidence": 0.53,
+      "truncated": false
+    },
+    {
+      "id": 2,
+      "text": "This is hilarious. Japan have zero chance this century. If any team outside of Europe/SA are going to win it'll be an African country first before anywhere else. Weebs are seriously getting out of con...",
+      "true": "hot_take",
+      "predicted": "analysis",
+      "confidence": 0.43,
+      "truncated": true
+    },
+    {
+      "id": 3,
+      "text": "I'm a Japanese but admit we were playing against a trash team",
+      "true": "hot_take",
+      "predicted": "reaction",
+      "confidence": 0.70,
+      "truncated": false
+    },
+    {
+      "id": 4,
+      "text": "Iran played haramball until Belgium got the red card and Iran came dangerously close to winning. This is a weird World Cup",
+      "true": "analysis",
+      "predicted": "hot_take",
+      "confidence": 0.41,
+      "truncated": false
+    },
+    {
+      "id": 5,
+      "text": "Bound to happen when there’s 50 teams competing",
+      "true": "hot_take",
+      "predicted": "reaction",
+      "confidence": 0.52,
+      "truncated": false
+    },
+    {
+      "id": 6,
+      "text": "Well played to both teams and ivory coast especially for deadlocking germany for so long but my gosh was the ref making hella bad calls. Not only does ivory have the best actors for injuries but even ...",
+      "true": "hot_take",
+      "predicted": "analysis",
+      "confidence": 0.44,
+      "truncated": true
+    },
+    {
+      "id": 7,
+      "text": "whoever wins the world cup would be my pick. its a team sport and if that team managed to win they are the best choice. just taking the best players and trying to make a team out of that isnt really t...",
+      "true": "analysis",
+      "predicted": "reaction",
+      "confidence": 0.39,
+      "truncated": true
+    },
+    {
+      "id": 8,
+      "text": "Ecuador look shit and I’ve enjoyed seeing the “they’re dark horses bro trust me bro” brigade scramble to excuse their performances. Just like there’s always one giant who underperforms at a World Cup,...",
+      "true": "hot_take",
+      "predicted": "reaction",
+      "confidence": 0.62,
+      "truncated": true
+    },
+    {
+      "id": 9,
+      "text": "african teams are on the rise, morocco has been consistently good for a little bit now, senegal is competitive. i love to see it. don't love morocco personally but it would be cool to see an african t...",
+      "true": "reaction",
+      "predicted": "hot_take",
+      "confidence": 0.40,
+      "truncated": true
+    },
+    {
+      "id": 10,
+      "text": "In January the US government added Cape Verde to the list of countries whose citizens have to post a returnable bond of up to $15,000 (£11,200) before travelling to the US, on top of the visa fee. As ...",
+      "true": "reaction",
+      "predicted": "hot_take",
+      "confidence": 0.38,
+      "truncated": true
+    },
+    {
+      "id": 11,
+      "text": "Cabo verde are the real dark horses of this tournament",
+      "true": "hot_take",
+      "predicted": "reaction",
+      "confidence": 0.58,
+      "truncated": false
+    },
+    {
+      "id": 12,
+      "text": "This Japan dickriding is never gonna stop. They might be the best team in Asia, but that is a pretty low bar. They're not even the best team outside europe/south america, as theres a lot of teams in a...",
+      "true": "hot_take",
+      "predicted": "analysis",
+      "confidence": 0.51,
+      "truncated": true
+    },
+    {
+      "id": 13,
+      "text": "As a Dutch fan, it's always so frustrating that whenever they play well, they start playing worse once they are ahead.",
+      "true": "reaction",
+      "predicted": "analysis",
+      "confidence": 0.41,
+      "truncated": false
+    }
+  ]
+}
+
