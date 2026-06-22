@@ -1,6 +1,6 @@
 ## Exporting the fine-tuned TakeMeter model from Colab
 
-After you have run fine-tuning in `ai201_project3_takemeter_starter_tuned.ipynb` (Section 3) and see `✅ Fine-tuning complete`, run the cell below once to export the model and tokenizer and zip them for download.
+After you have run fine-tuning in `colab/ai201_project3_takemeter_starter_tuned.ipynb` (Section 3) and see `✅ Fine-tuning complete`, run the cell below once to export the model and tokenizer and zip them for download.
 
 Paste this into a new code cell at the end of Section 3 (or anywhere *after* `trainer.train()` has finished):
 

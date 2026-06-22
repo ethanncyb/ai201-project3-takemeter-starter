@@ -6,6 +6,9 @@ The script reads the raw text so the CSV 'text' column is always verbatim,
 and uses csv.writer for correct quoting/escaping of commas, quotes and emojis.
 """
 import csv
+from pathlib import Path
+
+SCRIPT_DIR = Path(__file__).resolve().parent
 
 # line_number -> (label, notes)
 ANN = {
@@ -298,8 +301,8 @@ REACTION_DROP = {
     116, 168, 250, 262, 274, 304, 314, 336, 340, 358, 360, 370, 382, 440, 466, 472,
 }
 
-src = "dataset-raw.txt"
-out = "dataset-labeled.csv"
+src = SCRIPT_DIR / "dataset-raw.txt"
+out = SCRIPT_DIR / "dataset-labeled.csv"
 
 with open(src, encoding="utf-8") as f:
     lines = f.read().splitlines()

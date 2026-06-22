@@ -4,6 +4,16 @@
 
 Full design rationale, edge-case rules, and the hyperparameter evolution log live in [`planning.md`](planning.md).
 
+### Project layout
+
+| Path | Contents |
+|------|----------|
+| `dataset/` | Raw comments (`dataset-raw.txt`), labeled CSV (`dataset-labeled.csv`), and annotation script (`label_dataset.py`) |
+| `colab/` | Fine-tuning notebooks (`ai201_project3_takemeter_starter_tuned.ipynb`, starter template) |
+| `evaluation_results/` | Confusion matrices and JSON metric summaries from training runs |
+| `error_pattern_analysis/` | Tuned-run misclassification export (`misclassifications_tuned.json`) and analysis script |
+| `classify.py` | Terminal CLI for classifying new posts (expects `takemeter-model/` at repo root) |
+
 ---
 
 ## Label Taxonomy
@@ -39,19 +49,19 @@ An **immediate, short, emotional** expression (celebration, disappointment, humo
 
 ### Data source
 
-Public World Cup comments were collected from r/soccer threads into `dataset-raw.txt`, then annotated one comment at a time against the label definitions above. Every example is from public posts; no private channels or authenticated content.
+Public World Cup comments were collected from r/soccer threads into `dataset/dataset-raw.txt`, then annotated one comment at a time against the label definitions above. Every example is from public posts; no private channels or authenticated content.
 
 ### Labeling process
 
 1. An LLM pre-labeled each raw comment with one label and a one-line justification (disclosed in [AI Usage](#ai-usage--spec-reflection)).
 2. **Every pre-assigned label was reviewed and corrected by hand.** Borderline rows were re-adjudicated manually using the explicit decision rule in [`planning.md` §3](planning.md#3-hard-edge-cases--explicit-decision-rules).
-3. The full mapping is tracked in `label_dataset.py` and written to `dataset-labeled.csv` (`text`, `label`, `notes`).
+3. The full mapping is tracked in `dataset/label_dataset.py` and written to `dataset/dataset-labeled.csv` (`text`, `label`, `notes`).
 
 Confirm counts:
 
 ```bash
-python label_dataset.py
-# wrote 200 rows to dataset-labeled.csv
+python dataset/label_dataset.py
+# wrote 200 rows to dataset/dataset-labeled.csv
 # label counts: {'hot_take': 48, 'reaction': 102, 'analysis': 50}
 ```
 
@@ -81,10 +91,12 @@ All three labels are ≥20% and no label exceeds 70%. The Colab notebook perform
 | Setting | Value |
 |---------|-------|
 | **Base model** | `distilbert-base-uncased` (HuggingFace) |
-| **Platform** | Google Colab (T4 GPU), notebook `ai201_project3_takemeter_starter_tuned.ipynb` |
+| **Platform** | Google Colab (T4 GPU), notebook `colab/ai201_project3_takemeter_starter_tuned.ipynb` |
 | **Libraries** | `transformers`, `datasets`, `scikit-learn`, `torch` |
 | **Split** | 70 / 15 / 15 train / val / test (seed-locked in notebook) |
 | **Max sequence length** | 256 tokens |
+| **Dataset upload** | Upload `dataset/dataset-labeled.csv` when prompted in Colab |
+| **Saved artifacts** | After a run, move `confusion_matrix*.png` and `evaluation_results*.json` into `evaluation_results/`, and `misclassifications_tuned.json` into `error_pattern_analysis/`, before committing |
 
 ### Key hyperparameter decision
 
@@ -157,7 +169,7 @@ Rows = true label, columns = predicted label.
 | **hot_take** | 3        | 0        | 4        |
 | **reaction** | 1        | 2        | 12       |
 
-17 / 30 correct (56.7% accuracy). See also `confusion_matrix_tuned.png` and `evaluation_results_tuned.json`.
+17 / 30 correct (56.7% accuracy). See also `evaluation_results/confusion_matrix_tuned.png` and `evaluation_results/evaluation_results_tuned.json`.
 
 ### Sample classifications (fine-tuned model)
 
@@ -197,7 +209,7 @@ Rows = true label, columns = predicted label.
 - **Why it should be `analysis`:** it points to a turning point (red card) and links it to a shift in the match (cause → effect).
 - **Pattern:** real `analysis` written in messy fan language gets misread.
 
-All 13 test-set errors are exported in `misclassifications_tuned.json`.
+All 13 test-set errors are exported in `error_pattern_analysis/misclassifications_tuned.json`.
 
 ### Reflection: intended vs. learned behavior
 
@@ -215,7 +227,7 @@ All 13 test-set errors are exported in `misclassifications_tuned.json`.
 
 1. **Label stress-testing.** Claude was given the label definitions and asked to generate borderline `analysis`/`hot_take` posts. Posts it could not classify cleanly led to the explicit "must connect the metric to a **structural justification of the outcome**" rule in [`planning.md` §3](planning.md#3-hard-edge-cases--explicit-decision-rules), written *before* annotating 200 examples.
 
-2. **Annotation assistance (LLM pre-labeling + manual review).** An LLM pre-labeled raw comments with one label and a one-line justification per row. **Every label was then reviewed and corrected by hand**; borderline rows were re-adjudicated manually. The full mapping is in `label_dataset.py`.
+2. **Annotation assistance (LLM pre-labeling + manual review).** An LLM pre-labeled raw comments with one label and a one-line justification per row. **Every label was then reviewed and corrected by hand**; borderline rows were re-adjudicated manually. The full mapping is in `dataset/label_dataset.py`.
 
 3. **Error / failure-pattern analysis.** After each training run, misclassified test examples were passed to an LLM to surface directional confusions (e.g. `hot_take → reaction`). Every proposed pattern was **verified by re-reading the actual rows** before entering this report.
 
@@ -224,16 +236,6 @@ All 13 test-set errors are exported in `misclassifications_tuned.json`.
 **One way the spec helped:** it forced naming the hardest edge case *before* labeling everything — the Borderline Stat Post rule exists because of that requirement, not as a post-hoc excuse. It also pushed away from accuracy-only evaluation; per-class F1 is what exposed the majority-class collapse.
 
 **One way execution diverged:** the intent was to fine-tune on 200 balanced, hand-reviewed examples and at least match the 70% Groq zero-shot baseline. Reality: 56.7% accuracy and `hot_take` F1 = 0.00. After fixing the training bug, there was no second data pass to add more borderline `hot_take` examples once the collapse appeared.
-
----
-
-## Demo Video
-
-> **TODO:** Add your 3–5 minute demo video link here before submission.
->
-> The video should show: 3–5 posts classified with label + confidence visible; one correct prediction explained; one incorrect prediction explained; a brief walkthrough of the evaluation metrics above.
-
-Until the video is recorded, the [Sample classifications](#sample-classifications-fine-tuned-model) table and the [TakeMeter CLI](#deployed-interface--takemeter-cli) below demonstrate live classification with confidence output.
 
 ---
 
@@ -269,10 +271,10 @@ Representative misclassified examples from the tuned run (text truncated to matc
 
 Together, these errors show a **systematic boundary failure**: DistilBERT is using surface cues (length, number of clauses, emotional tone) to choose between `analysis` and `reaction` and almost never learns the intermediate `hot_take` class.
 
-For reproducibility, the 13 tuned-run errors are stored in `misclassifications_tuned.json`, and a helper script summarizes directional confusions and length buckets:
+For reproducibility, the 13 tuned-run errors are stored in `error_pattern_analysis/misclassifications_tuned.json`, and a helper script summarizes directional confusions and length buckets:
 
 ```bash
-python error_pattern_analysis.py
+python error_pattern_analysis/error_pattern_analysis.py
 ```
 
 ### Deployed interface — TakeMeter CLI
@@ -281,7 +283,7 @@ This repository includes a small terminal interface that accepts a new post, run
 
 #### 1. Export the fine-tuned model from Colab
 
-1. Open `ai201_project3_takemeter_starter_tuned.ipynb` in Colab and run fine-tuning (Section 3) until you see `✅ Fine-tuning complete`.
+1. Open `colab/ai201_project3_takemeter_starter_tuned.ipynb` in Colab and run fine-tuning (Section 3) until you see `✅ Fine-tuning complete`.
 2. Follow the steps in `MODEL_EXPORT.md` to run the export cell, zip the model, and download `takemeter-model.zip`.
 3. Unzip `takemeter-model.zip` into the project root so you have a `takemeter-model/` directory next to `classify.py`.
 

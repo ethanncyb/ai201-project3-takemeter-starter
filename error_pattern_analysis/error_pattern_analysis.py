@@ -38,9 +38,11 @@ def bucket_hot_take_lengths(errors, threshold: int = 80):
 
 
 def main():
-    path = Path("misclassifications_tuned.json")
+    path = Path(__file__).resolve().parent / "misclassifications_tuned.json"
     if not path.exists():
-        raise SystemExit("misclassifications_tuned.json not found. Run from repo root.")
+        raise SystemExit(
+            f"{path} not found. Export tuned-run errors into error_pattern_analysis/ first."
+        )
 
     errors = load_errors(path)
 

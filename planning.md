@@ -65,11 +65,11 @@ The hardest anticipated edge case is the **"Borderline Stat Post"**: a comment r
 
 ## 4. Data Collection Plan & Distribution Safeguards
 
-**Origin:** public World Cup comments were collected from r/soccer threads into `dataset-raw.txt`, then annotated one comment at a time against the [Section 2](#2-label-taxonomy) definitions (a per-row justification is stored in the `notes` column). Collection was manual and close to the data, deliberately not a scraping or engineering project.
+**Origin:** public World Cup comments were collected from r/soccer threads into `dataset/dataset-raw.txt`, then annotated one comment at a time against the [Section 2](#2-label-taxonomy) definitions (a per-row justification is stored in the `notes` column). Collection was manual and close to the data, deliberately not a scraping or engineering project.
 
-**Target volume:** a minimum of **200 labeled examples** in a single combined CSV (`dataset-labeled.csv`, columns `text, label, notes`). The Colab notebook performs the 70 / 15 / 15 train / validation / test split automatically, so a single unsplit file is shipped (≈140 train / 30 validation / 30 test).
+**Target volume:** a minimum of **200 labeled examples** in a single combined CSV (`dataset/dataset-labeled.csv`, columns `text, label, notes`). The Colab notebook performs the 70 / 15 / 15 train / validation / test split automatically, so a single unsplit file is shipped (≈140 train / 30 validation / 30 test).
 
-**Distribution safeguards against class imbalance:** every label must hold **≥20%** of the dataset and **no single label may exceed 70%**, so the model cannot win by defaulting to a majority class. `reaction` was naturally the largest class in the raw pass (158 rows); it was **downsampled to 102** by removing redundant clusters (goalkeeper-praise pile-ups, off-topic political/personal chatter, near-duplicates, and tight topic clusters such as the Philly-curse and VAR-reaction threads) while **retaining ≥1–2 exemplars of every reaction subtype** so the class stays linguistically varied. The exact 56-row drop set and the full label map are reproducible in `label_dataset.py`.
+**Distribution safeguards against class imbalance:** every label must hold **≥20%** of the dataset and **no single label may exceed 70%**, so the model cannot win by defaulting to a majority class. `reaction` was naturally the largest class in the raw pass (158 rows); it was **downsampled to 102** by removing redundant clusters (goalkeeper-praise pile-ups, off-topic political/personal chatter, near-duplicates, and tight topic clusters such as the Philly-curse and VAR-reaction threads) while **retaining ≥1–2 exemplars of every reaction subtype** so the class stays linguistically varied. The exact 56-row drop set and the full label map are reproducible in `dataset/label_dataset.py`.
 
 **Realized distribution (final, 200 examples):**
 
@@ -90,6 +90,14 @@ All three labels clear the ≥20% floor and sit well under the 70% ceiling. This
 
 The evaluation reports **overall accuracy**, plus **per-class precision, recall, and F1** and **macro-F1**, alongside a **confusion matrix**.
 
+### Stretch Feature (Bonus): Systematic error-pattern analysis — plan before implementation
+
+This section is a pre-commit note before implementing the optional **Systematic error-pattern analysis** bonus feature in `README.md` (Bonus Section 3).
+
+- **Working hypothesis**: `hot_take` is a “messy middle” class between `analysis` and `reaction`. On errors, the model will split true `hot_take` cases toward `analysis` when the post is longer / comparative / multi-clause, and toward `reaction` when the post is short and hype-like.
+- **Data source**: the tuned run’s locked test split outputs from `colab/ai201_project3_takemeter_starter_tuned.ipynb` (the “Wrong predictions: 13 / 30” printout) and the tuned confusion matrix already embedded below.
+- **Verification method**: manually re-read each misclassified true `hot_take` test example against the explicit decision rule in [Section 3](#3-hard-edge-cases--explicit-decision-rules) (“asserts vs. argues”), and support the claimed pattern with multiple examples from different subtypes (short hype-like vs. longer comparative takes). Reproducible exports are in `error_pattern_analysis/` (`misclassifications_tuned.json`, `error_pattern_analysis.py`).
+
 Overall accuracy *alone is actively misleading* on this dataset, as the present run demonstrates. With `reaction` at 51% of the data, a model that predicts `reaction` for every input scores ~50% accuracy while learning nothing, which is exactly what the initial pipeline did ([Hyperparameter Evolution Log](#-hyperparameter-evolution-log) below): it flatlined at 0.50 accuracy and caught **0** `analysis` and **0** `hot_take` cases. A single accuracy number completely masked a total majority-class collapse.
 
 **Per-class F1 is what exposes that collapse.** F1 is the harmonic mean of precision and recall, so a class the model never predicts has recall 0 → F1 = 0, no matter how high overall accuracy looks. Tracking F1 *per label* makes a hidden collapse impossible to conceal:
@@ -103,9 +111,9 @@ The analysis tracks the confusion matrix's **`analysis` ↔ `hot_take`** and **`
 
 Two fine-tuned runs are on record: the initial collapsed run and the current run produced after the hyperparameter fix ([Hyperparameter Evolution Log](#-hyperparameter-evolution-log)). The confusion matrices below make the contrast concrete; rows are the true label and columns are the predicted label.
 
-**Initial run, total majority-class collapse** (`confusion_matrix.png`):
+**Initial run, total majority-class collapse** (`evaluation_results/confusion_matrix.png`):
 
-![Fine-tuned model confusion matrix, initial collapsed run](confusion_matrix.png)
+![Fine-tuned model confusion matrix, initial collapsed run](evaluation_results/confusion_matrix.png)
 
 | true ＼ pred | analysis | hot_take | reaction |
 |--------------|----------|----------|----------|
@@ -115,9 +123,9 @@ Two fine-tuned runs are on record: the initial collapsed run and the current run
 
 Every test post is predicted `reaction`. The model scores 15/30 = 50.0% accuracy purely from the majority class, while `analysis` and `hot_take` recall are both 0.
 
-**Current run, after the warmup / epoch / learning-rate fix** (`confusion_matrix_tuned.png`):
+**Current run, after the warmup / epoch / learning-rate fix** (`evaluation_results/confusion_matrix_tuned.png`):
 
-![Fine-tuned model confusion matrix, tuned run](confusion_matrix_tuned.png)
+![Fine-tuned model confusion matrix, tuned run](evaluation_results/confusion_matrix_tuned.png)
 
 | true ＼ pred | analysis | hot_take | reaction |
 |--------------|----------|----------|----------|
@@ -161,9 +169,9 @@ The three examples below are from the tuned run’s 13 test-set errors. Each one
 - **Why it should be `analysis`:** it points to a turning point (red card) and links it to a shift in the match (cause → effect).
 - **Pattern:** real `analysis` written in messy fan language gets misread.
 
-**Exported result artifacts.** The notebook writes one JSON summary per run; both files are committed to the repository.
+**Exported result artifacts.** The notebook writes one JSON summary per run; metric files live under `evaluation_results/`, and the tuned-run misclassification export lives in `error_pattern_analysis/misclassifications_tuned.json`. All are committed to the repository.
 
-`evaluation_results.json` (initial collapsed run):
+`evaluation_results/evaluation_results.json` (initial collapsed run):
 
 ```json
 {
@@ -176,7 +184,7 @@ The three examples below are from the tuned run’s 13 test-set errors. Each one
 }
 ```
 
-`evaluation_results_tuned.json` (current run):
+`evaluation_results/evaluation_results_tuned.json` (current run):
 
 ```json
 {
@@ -220,7 +228,7 @@ This project produces almost no implementation code, so AI tools were directed a
 
 - **Label stress-testing.** Claude was given the label definitions and edge-case description and asked to generate borderline `analysis`/`hot_take` posts. Posts it produced that could not be classified cleanly indicated that the definitions were too loose. *Outcome:* this directly produced the explicit "must connect the metric to a **structural justification of the outcome**" rule in [Section 3](#3-hard-edge-cases--explicit-decision-rules), written *before* annotating 200 examples.
 
-- **Automated annotation assistance (LLM pre-labeling + manual review).** An LLM pre-labeled the raw comments against the taxonomy, emitting one label plus a one-line justification per row. **Every pre-assigned label was then reviewed and corrected by hand**, so pre-labeling sped up throughput, but the borderline rows in [Section 3](#3-hard-edge-cases--explicit-decision-rules) were re-adjudicated manually to avoid feeding noisy labels into training. The full mapping is tracked in `label_dataset.py` so the dataset is auditable and reproducible. *This pre-labeling is disclosed here and will be disclosed in the README's AI-usage section.*
+- **Automated annotation assistance (LLM pre-labeling + manual review).** An LLM pre-labeled the raw comments against the taxonomy, emitting one label plus a one-line justification per row. **Every pre-assigned label was then reviewed and corrected by hand**, so pre-labeling sped up throughput, but the borderline rows in [Section 3](#3-hard-edge-cases--explicit-decision-rules) were re-adjudicated manually to avoid feeding noisy labels into training. The full mapping is tracked in `dataset/label_dataset.py` so the dataset is auditable and reproducible. *This pre-labeling is disclosed here and will be disclosed in the README's AI-usage section.*
 
 - **Error / failure-pattern analysis.** After each training run, the misclassified test examples are passed to an LLM that is asked to surface patterns such as short or low-information posts, sarcasm, and directional confusions (e.g. `hot_take → reaction`). *Outcome:* this is how the `hot_take` "messy middle" failure mode was characterized. Every proposed pattern is then **verified by re-reading the actual rows** before it enters the evaluation report; the LLM proposes, the human confirms.
 
@@ -238,6 +246,24 @@ This project produces almost no implementation code, so AI tools were directed a
 - **Intent:** fine-tune on 200 balanced, hand-reviewed examples and at least match the 70% Groq zero-shot baseline.
 - **Reality:** tuned run got **56.7% accuracy** and **`hot_take` F1 = 0.00**.
 - **Why (my best read):** I fixed the training bug first ([Hyperparameter Evolution Log](#-hyperparameter-evolution-log)), but I didn’t do a second data pass to add more “clear-but-borderline” `hot_take` examples once I saw the collapse. So the model leaned on shallow cues (long = `analysis`, short hype = `reaction`) instead of the “asserts vs. argues” rule.
+
+---
+
+## 8. Stretch Feature Plan: Deployed Interface (Terminal CLI)
+
+Before implementing the bonus **Deployed interface** feature, the design choice is to ship a small, dependency-light **terminal CLI** instead of a web UI:
+
+- **Interface shape:** a Python script `classify.py` that loads the fine-tuned DistilBERT classifier from a local `takemeter-model/` directory and exposes:
+  - a one‑shot mode (`python classify.py "post text here"`) and
+  - an interactive REPL (`python classify.py` → type posts until a blank line).
+- **Model dependency:** the fine-tuned weights are trained in `colab/ai201_project3_takemeter_starter_tuned.ipynb` and exported from Colab using the `trainer.save_model(...)` + `tokenizer.save_pretrained(...)` pattern. The exported directory is downloaded and unzipped into the repo root; we deliberately do **not** commit the large model files to git.
+- **Behavioral parity with the notebook:** the CLI reuses the same configuration as the tuned Colab run:
+  - label map `{"analysis": 0, "hot_take": 1, "reaction": 2}`,
+  - tokenization with `truncation=True`, `max_length=256`, and
+  - confidence reported as the softmax probability of the predicted class.
+- **Environment expectations:** run instructions use `python -m venv venv` to create a virtual environment, then `pip install -r requirements.txt` (minimal dependencies: `torch`, `transformers`) before calling `classify.py`.
+
+This keeps the deployed interface aligned with the evaluation pipeline and lightweight enough to run on a student laptop without any additional services.
 
 ---
 
@@ -263,4 +289,4 @@ The first pipeline suffered a **total majority-class collapse**: validation loss
 
 ---
 
-*This document is updated as the project evolves; it will be updated again before starting any stretch features (inter-annotator reliability, confidence calibration, deeper error-pattern analysis, or a deployed interface).*
+*This document is updated as the project evolves; it will be updated again before starting any remaining stretch features (inter-annotator reliability, confidence calibration, or deeper error-pattern analysis).*
